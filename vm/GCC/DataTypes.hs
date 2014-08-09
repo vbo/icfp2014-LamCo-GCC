@@ -65,16 +65,19 @@ data EnvFrames = EnvFrames
     } deriving (Show)
 
 allocEnvFrame :: EnvFrames -> Int -> Int -> (Int, EnvFrames)
-allocEnvFrame (EnvFrames tbl nxt) size parent = (nxt, EnvFrames (Map.insert nxt (EnvFrame Map.empty size parent) tbl) newNxt)
-    where newNxt = nxt + 1
+allocEnvFrame (EnvFrames tbl nxt) size parent = (nxt, EnvFrames tbl' nxt')
+    where
+        tbl' = Map.insert nxt (EnvFrame Map.empty size parent) tbl
+        nxt' = nxt + 1
 
 setEnvFrameVal :: EnvFrames -> Int -> Int -> DataValue -> EnvFrames
 setEnvFrameVal frames@(EnvFrames tbl nxt) fid vid val = EnvFrames tbl' nxt
-    where (EnvFrame v s p)  = getEnvFrame frames fid
-          frame'
-              | vid < s   = EnvFrame (Map.insert vid val v) s p
-              | otherwise = error ("setting value in illegal index: " ++ show fid ++ " " ++ show vid) 
-          tbl'   = Map.insert fid frame' tbl
+    where
+        (EnvFrame v s p)  = getEnvFrame frames fid
+        frame'
+            | vid < s   = EnvFrame (Map.insert vid val v) s p
+            | otherwise = error ("setting value in illegal index: " ++ show fid ++ " " ++ show vid) 
+        tbl'   = Map.insert fid frame' tbl
 
 getEnvFrame :: EnvFrames -> Int -> EnvFrame
 getEnvFrame (EnvFrames tbl nxt) fid = frame
