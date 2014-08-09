@@ -4,8 +4,8 @@ module GCC.Runner
 
 import qualified Data.Map as Map
 
-import GCC.Instructions
-import GCC.DataTypes
+import GCC.Instructions(Instruction, instructionExec)
+import GCC.DataTypes(GCC, codePointer)
 
 step :: Map.Map Int Instruction -> GCC -> (Instruction, Maybe GCC)
 step instructions gcc = (instruction, instructionExec gcc instruction)

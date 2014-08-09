@@ -1,0 +1,18 @@
+LDC 100500
+LDC 42
+LDF $k_comb
+AP 1 ; calling k_comb 42 getting k_comb_inner with 42 captured inside
+AP 1 ; calling k_comb_inner 100500 getting 42 from k_comb scope
+
+; check 42 is alone on the stack
+RTN
+
+$k_comb:
+    ; k_comp x = (\y -> x)
+    LDF $k_comb_inner ; define function here so it have access to current scope (with x in it)
+    RTN
+
+$k_comb_inner:
+    LD 1 0 ; load value from auter scope (x should be here
+    RTN
+

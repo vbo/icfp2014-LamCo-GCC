@@ -1,0 +1,23 @@
+LDC 1
+LDC 1
+CEQ
+SEL $eq $not_eq
+LDC 0
+CONS
+BRK
+
+CAR
+CDR
+RTN
+
+$eq:
+    LDC 2
+    LDC 42
+    CONS
+    JOIN
+$not_eq:
+    LDC 22
+    LDC 33
+    CONS
+    JOIN
+

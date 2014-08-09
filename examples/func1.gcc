@@ -1,0 +1,16 @@
+LDC 40
+LDC 2
+CONS
+LDF $sum_pair
+AP 1
+RTN
+
+$sum_pair:
+    LD 0 0
+    CAR
+    LD 0 0
+    CDR
+    BRK
+    ADD
+    RTN
+
