@@ -8,11 +8,15 @@ Specification can be found here: http://icfpcontest.org/specification.html
 
 Actual "virtual machine" able to execute GCC assembly instructions is written in Haskell.
 
-    Building: ./vm/build.sh (requires ghc and pretty-show package - cabal install pretty-show)
+    Building: ./vm/build.sh
+        requires ghc
+        deps: cabal install pretty-show
 
     Usage: ./vm/Main raw.gcc
         Loads assembly code from raw.gcc and starts a kind of "debugging session"
-        where you can execute instructions step-by-step (st) and watch how machine state changes.
+        where you can execute instructions step-by-step (st)
+        and watch how machine state changes.
+        
         Alternatively you can continue to the next breakpoint (co).
 
 I also found it nice to have a very basic macro pre-processor available to simplify assembly coding.
