@@ -4,7 +4,6 @@ import qualified System.IO as SIO
 
 import Text.Show.Pretty(ppShow)
 
-import Debug
 import GCC.Instructions(Instruction, isInstructionLine, parseInstruction)
 import GCC.DataTypes(GCC, codePointer, initGCC, debugState, DebugState(..))
 import GCC.Runner(step)
@@ -21,45 +20,45 @@ loadInstructions = do
     args <- getArgs
     let inputFile = (args !! 0)
     input <- SIO.openFile inputFile SIO.ReadMode
-    lines <- hGetLines input
+    code_lines <- hGetLines input
     SIO.hClose input
-    let instructions = Map.fromList . addLineNumbers . map parseInstruction . filter isInstructionLine $ lines
+    let instructions = Map.fromList . addLineNumbers . map parseInstruction . filter isInstructionLine $ code_lines
     return instructions
 
 inputLoop :: Map.Map Int Instruction -> GCC -> IO ()
-inputLoop instructions gcc = do
+inputLoop instructions inGcc = do
     putStrLn ""
     cmd <- getLine
     case cmd of
-        "st" -> do stepDo gcc
-        "co" -> do contLoop gcc
-        ""   -> do loop gcc
-        otherwise -> do
+        "st" -> do stepDo inGcc
+        "co" -> do contLoop inGcc
+        ""   -> do loop inGcc
+        _    -> do
             putStrLn "! Unrecognized command. Use: st, co"
-            loop gcc
+            loop inGcc
     where
         loop         = inputLoop instructions
         stepDo gcc   = do
             let (instruction, gcc') = step instructions gcc
             putStrLn $ "! Executed: " ++ show instruction
             case gcc' of
-                Nothing    -> return()
-                (Just gcc) -> case debugState gcc of
+                Nothing       -> return()
+                (Just newGcc) -> case debugState newGcc of
                     DebugPrint x -> do putStrLn ("! Debug: " ++ show x); next
-                    otherwise    -> next
-                    where next = do dump gcc; loop gcc
+                    _            -> next
+                    where next = do dump newGcc; loop newGcc
         contLoop gcc = do
-            let (instruction, gcc') = step instructions gcc
+            let (_, gcc') = step instructions gcc
             case gcc' of
-                Nothing    -> do dump gcc; return()
-                (Just gcc) -> case debugState gcc of
-                    DebugPrint x -> do putStrLn ("! Debug: " ++ show x); contLoop gcc
+                Nothing       -> do dump gcc; return()
+                (Just newGcc) -> case debugState newGcc of
+                    DebugPrint x -> do putStrLn ("! Debug: " ++ show x); contLoop newGcc
                     DebugBreak   -> do
-                        putStrLn ("! Break at:" ++ (show $ codePointer gcc))
-                        dump gcc
-                        loop gcc
-                    NoDebug      -> contLoop gcc
-        dump gcc = putStrLn $ ppShow gcc
+                        putStrLn ("! Break at:" ++ (show $ codePointer newGcc))
+                        dump newGcc
+                        loop newGcc
+                    NoDebug      -> contLoop newGcc
+        dump = putStrLn . ppShow
 
 hGetLines :: SIO.Handle -> IO [String]
 hGetLines h = do

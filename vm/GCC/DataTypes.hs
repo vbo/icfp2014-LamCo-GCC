@@ -80,25 +80,25 @@ setEnvFrameVal frames@(EnvFrames tbl nxt) fid vid val = EnvFrames tbl' nxt
         tbl'   = Map.insert fid frame' tbl
 
 getEnvFrame :: EnvFrames -> Int -> EnvFrame
-getEnvFrame (EnvFrames tbl nxt) fid = frame
+getEnvFrame (EnvFrames tbl _) fid = frame
     where
         frame
             | Map.member fid tbl = tbl Map.! fid
             | otherwise          = error ("accessing illegal frame: " ++ show fid)
 
 getEnvFrameVal :: EnvFrames -> Int -> Int -> DataValue
-getEnvFrameVal frames@(EnvFrames tbl nxt) fid vid = frameVal
+getEnvFrameVal frames fid vid = frameVal
     where
-        (EnvFrame v s p)  = getEnvFrame frames fid
+        frame  = getEnvFrame frames fid
         frameVal
-            | vid < s   = v Map.! vid
-            | otherwise = error ("getting value fron illegal index: " ++ show fid ++ " " ++ show vid) 
+            | vid < (frameSize frame) = (envValues frame) Map.! vid
+            | otherwise               = error ("getting value fron illegal index: " ++ show fid ++ " " ++ show vid) 
 
 getEnvFrameValRelative :: EnvFrames -> Int -> Int -> Int -> DataValue
 getEnvFrameValRelative frames fid frel vid
     | frel == 0 = getEnvFrameVal frames fid vid
-    | otherwise = getEnvFrameValRelative frames parid (frel - 1) vid
-        where (EnvFrame v s parid)  = getEnvFrame frames fid
+    | otherwise = getEnvFrameValRelative frames (parentFrame frame) (frel - 1) vid
+        where frame  = getEnvFrame frames fid
 
 -- Debug state
 data DebugState =
