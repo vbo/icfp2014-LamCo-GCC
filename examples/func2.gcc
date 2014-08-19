@@ -4,7 +4,7 @@ LDF $k_comb
 AP 1 ; calling k_comb 42 getting k_comb_inner with 42 captured inside
 AP 1 ; calling k_comb_inner 100500 getting 42 from k_comb scope
 
-; check 42 is alone on the stack
+; 42 is alone on the stack
 RTN
 
 $k_comb:

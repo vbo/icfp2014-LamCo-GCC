@@ -2,16 +2,21 @@ module GCC.DataTypes
 ( DataValue(..)
 , ControlValue(..)
 , EnvFrames(..)
+, EnvFrame(..)
 , GCC(..)
+, setEnvFrames
 , DebugState(..)
 , Stack
 , stackPop
 , stackPopMulti
 , stackPush
+, stackFold
 , initGCC
 , allocEnvFrame
 , setEnvFrameVal
 , getEnvFrameValRelative
+, getEnvFrame
+, setEnvFrame
 ) where
 
 import qualified Data.Map as Map
@@ -36,6 +41,11 @@ stackPopMulti stack n
 stackPush :: Stack a -> a -> Stack a
 stackPush stack val = Push val stack
 
+stackFold :: (b -> a -> a) -> a -> Stack b -> a
+stackFold f z xs = case xs of
+    EmptyStack    -> z
+    Push x tailxs -> f x (stackFold f z tailxs)
+
 -- GCC data types --
 -- Data stack values
 data DataValue =
@@ -53,9 +63,10 @@ data ControlValue =
 
 -- Environment frame type
 data EnvFrame = EnvFrame
-    { envValues   :: Map.Map Int DataValue
-    , frameSize   :: Int
-    , parentFrame :: Int
+    { envValues        :: Map.Map Int DataValue
+    , frameSize        :: Int
+    , parentFrame      :: Int
+    , frameReachable   :: Bool
     } deriving (Show)
 
 -- Environment frame storage interface
@@ -67,17 +78,19 @@ data EnvFrames = EnvFrames
 allocEnvFrame :: EnvFrames -> Int -> Int -> (Int, EnvFrames)
 allocEnvFrame (EnvFrames tbl nxt) size parent = (nxt, EnvFrames tbl' nxt')
     where
-        tbl' = Map.insert nxt (EnvFrame Map.empty size parent) tbl
+        tbl' = Map.insert nxt (EnvFrame Map.empty size parent True) tbl
         nxt' = nxt + 1
 
+setEnvFrame :: EnvFrames -> Int -> EnvFrame -> EnvFrames
+setEnvFrame frames fid fr = frames { envTable = Map.insert fid fr (envTable frames) }
+
 setEnvFrameVal :: EnvFrames -> Int -> Int -> DataValue -> EnvFrames
-setEnvFrameVal frames@(EnvFrames tbl nxt) fid vid val = EnvFrames tbl' nxt
+setEnvFrameVal frames fid vid val = setEnvFrame frames fid frame'
     where
-        (EnvFrame v s p)  = getEnvFrame frames fid
+        (EnvFrame v s p _)  = getEnvFrame frames fid
         frame'
-            | vid < s   = EnvFrame (Map.insert vid val v) s p
+            | vid < s   = EnvFrame (Map.insert vid val v) s p True
             | otherwise = error ("setting value in illegal index: " ++ show fid ++ " " ++ show vid) 
-        tbl'   = Map.insert fid frame' tbl
 
 getEnvFrame :: EnvFrames -> Int -> EnvFrame
 getEnvFrame (EnvFrames tbl _) fid = frame
@@ -116,6 +129,9 @@ data GCC = GCC
     , envFrameRef  :: Int                -- Current Environment Frame id
     , debugState   :: DebugState         -- Value to print in debug mode (see DBUG instruction)
     } deriving (Show)
+
+setEnvFrames :: GCC -> EnvFrames -> GCC
+setEnvFrames gcc ef = gcc { envFrames = ef }
 
 initGCC :: GCC
 initGCC = GCC 0 EmptyStack (stackPush EmptyStack ControlStop) (EnvFrames Map.empty 0) (-1) NoDebug
