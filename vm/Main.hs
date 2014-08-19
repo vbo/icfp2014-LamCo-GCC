@@ -36,39 +36,40 @@ inputLoop instructions inGcc = do
         _    -> do
             putStrLn "! Unrecognized command. Use: st, co"
             loop inGcc
-    where
-        loop         = inputLoop instructions
-        stepDo gcc   = do
-            let (instruction, gcc') = step instructions gcc
-            putStrLn $ "! Executed: " ++ show instruction
-            case gcc' of
-                Nothing       -> return()
-                (Just newGcc) -> case debugState newGcc of
-                    DebugPrint x -> do putStrLn ("! Debug: " ++ show x); next
-                    _            -> next
-                    where next = do dump newGcc; loop newGcc
-        contLoop gcc = do
-            let (_, gcc') = step instructions gcc
-            case gcc' of
-                Nothing       -> do dump gcc; return()
-                (Just newGcc) -> case debugState newGcc of
-                    DebugPrint x -> do putStrLn ("! Debug: " ++ show x); contLoop newGcc
-                    DebugBreak   -> do
-                        putStrLn ("! Break at:" ++ (show $ codePointer newGcc))
-                        dump newGcc
-                        loop newGcc
-                    NoDebug      -> contLoop newGcc
-        dump = putStrLn . ppShow
+  where
+    dump         = putStrLn . ppShow
+    loop         = inputLoop instructions
+    stepDo gcc   = do
+        let (instruction, gcc') = step instructions gcc
+        putStrLn $ "! Executed: " ++ show instruction
+        case gcc' of
+            Nothing       -> return()
+            (Just newGcc) -> case debugState newGcc of
+                DebugPrint x -> do putStrLn ("! Debug: " ++ show x); next
+                _            -> next
+              where
+                next = do dump newGcc; loop newGcc
+    contLoop gcc  = do
+        let (_, gcc') = step instructions gcc
+        case gcc' of
+            Nothing       -> do dump gcc; return()
+            (Just newGcc) -> case debugState newGcc of
+                DebugPrint x -> do putStrLn ("! Debug: " ++ show x); contLoop newGcc
+                DebugBreak   -> do
+                    putStrLn ("! Break at:" ++ (show $ codePointer newGcc))
+                    dump newGcc
+                    loop newGcc
+                NoDebug      -> contLoop newGcc
 
 hGetLines :: SIO.Handle -> IO [String]
 hGetLines h = do
     ineof <- SIO.hIsEOF h
     if ineof
         then return []
-    else do
-        line <- SIO.hGetLine h
-        more <- hGetLines h
-        return $ line:more
+        else do
+            line <- SIO.hGetLine h
+            more <- hGetLines h
+            return $ line:more
 
 addLineNumbers :: [Instruction] -> [(Int, Instruction)]
 addLineNumbers = zip [0..]

@@ -13,12 +13,13 @@ import qualified Data.Map as Map
 import GCC.DataTypes
 
 garbageCollect :: GCC -> GCC
-garbageCollect gcc = setEnvFrames gcc . deleteUnreachable . markAsReachable topLevelRefs . resetReachable $ envFrames gcc
-    where
-        topLevelRefs     = curFrame : (dataStackRefs ++ controlStackRefs)
-        curFrame         = envFrameRef gcc
-        dataStackRefs    = stackFold collectClosureRefs [] $ dataStack gcc
-        controlStackRefs = stackFold collectReturnRefs []  $ controlStack gcc
+garbageCollect gcc = setEnvFrames gcc .
+    deleteUnreachable . markAsReachable topLevelRefs . resetReachable $ envFrames gcc
+  where
+    topLevelRefs     = curFrame : (dataStackRefs ++ controlStackRefs)
+    curFrame         = envFrameRef gcc
+    dataStackRefs    = stackFold collectClosureRefs [] $ dataStack gcc
+    controlStackRefs = stackFold collectReturnRefs []  $ controlStack gcc
 
 collectReturnRefs :: ControlValue -> [Int] -> [Int]
 collectReturnRefs v acc = case v of
@@ -42,11 +43,11 @@ markOneFrameReachable :: Int -> EnvFrames -> EnvFrames
 markOneFrameReachable ref ef
     | notMarked = markAsReachable referenced . setEnvFrame ef ref $ frame { frameReachable = True }
     | otherwise = ef
-    where
-        frame       = getEnvFrame ef ref
-        notMarked   = not . frameReachable $ frame
-        referenced  = (parentFrame frame) : inFrameRefs (envValues frame)
-        inFrameRefs = Map.fold collectClosureRefs []
+  where
+    frame       = getEnvFrame ef ref
+    notMarked   = not . frameReachable $ frame
+    referenced  = (parentFrame frame) : inFrameRefs (envValues frame)
+    inFrameRefs = Map.fold collectClosureRefs []
 
 deleteUnreachable :: EnvFrames -> EnvFrames
 deleteUnreachable (EnvFrames tbl n) = EnvFrames (Map.filter frameReachable tbl) n
