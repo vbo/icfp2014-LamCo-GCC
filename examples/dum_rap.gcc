@@ -1,0 +1,21 @@
+DUM 1
+LDF $sum_pair
+LDF $main
+RAP 1
+RTN
+
+$main:
+    LDC 40
+    LDC 2
+    CONS
+    LD 0 0
+    AP 1
+    RTN
+
+$sum_pair:
+    LD 0 0
+    CAR
+    LD 0 0
+    CDR
+    ADD
+    RTN

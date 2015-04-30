@@ -33,15 +33,6 @@ This script launches a macro pre-processor first and then compiles and runs vm o
 
 Notes
 -----
-Implementation progress.
+The whole instruction set is implemented. Example programs may not cover everything but it's close.
 
-Done
- - Core: STOP, LDC, LD, ADD, SUB, MUL, DIV, CEQ, CGT, CGTE, ATOM, CONS, CAR, CDR, SEL, JOIN, LDF, AP, RTN
- - Tail-call: TSEL, TAP (non-optimized)
- - Imperative: ST
- - Debug: BRK, DBUG
- - Garbage collector
-
-To-do
- - Core: DUM, RAP
- - Tail-call: TRAP
+TODO: tail-call optimization for TAP etc. More examples.

@@ -19,7 +19,7 @@ module GCC.DataTypes
 , modEnvFrameVal
 , getEnvFrame
 , setEnvFrame
-, assertEnvFrameNotDummy
+, assertEnvFrameDumminess
 ) where
 
 import qualified Data.Map as Map
@@ -111,10 +111,10 @@ modEnvFrameVal (EnvFrame v s p _ d) vid val
 setEnvFrameVal :: EnvFrames -> Int -> Int -> DataValue -> EnvFrames
 setEnvFrameVal frames fid vid val = setEnvFrame frames fid $ modEnvFrameVal (getEnvFrame frames fid) vid val
 
-assertEnvFrameNotDummy :: EnvFrame -> EnvFrame
-assertEnvFrameNotDummy frame
-    | isDummy frame = error ("non-dummy frame expected")
-    | otherwise     = frame
+assertEnvFrameDumminess :: EnvFrame -> Bool -> EnvFrame
+assertEnvFrameDumminess frame dummy
+    | isDummy frame /= dummy = error ("frame mismatch")
+    | otherwise      = frame
 
 getEnvFrameVal :: EnvFrame -> Int -> DataValue
 getEnvFrameVal frame vid = frameVal

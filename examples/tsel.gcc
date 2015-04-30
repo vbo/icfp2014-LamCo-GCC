@@ -5,14 +5,10 @@ TSEL $eq $not_eq
 RTN
 
 $eq:
-    LDC 2
     LDC 42
-    CONS
     RTN
 
 $not_eq:
     LDC 22
-    LDC 33
-    CONS
     RTN
 

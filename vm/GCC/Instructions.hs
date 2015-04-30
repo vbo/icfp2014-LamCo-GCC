@@ -53,7 +53,7 @@ instructionExec (GCC cp ds cs ef efr _) instruction = case instruction of
     LD  n i  -> Just $ GCC cpInc newDs cs ef efr NoDebug
       where
         fid      = getParentEnvFrameId ef efr n
-        frame    = assertEnvFrameNotDummy $ getEnvFrame ef fid
+        frame    = assertEnvFrameDumminess (getEnvFrame ef fid) False
         frameVal = getEnvFrameVal frame i
         newDs    = stackPush ds frameVal
     ADD      -> intBinaryOp  (+)
@@ -117,8 +117,20 @@ instructionExec (GCC cp ds cs ef efr _) instruction = case instruction of
         (ControlStop, _)              -> Nothing -- no next state, machine terminated 
         (ControlReturn cp' efp', cs') -> Just $ GCC cp' ds cs' ef efp' NoDebug
         _                             -> error "RTN: control mismatch"
-    DUM _    -> Nothing -- TODO
-    RAP _    -> Nothing -- TODO
+    DUM n    -> Just $ GCC cpInc ds cs newEf newEfr NoDebug
+      where
+        (newEfr, ef') = allocEnvFrame ef n efr
+        frameDummied  = (getEnvFrame ef' newEfr) { isDummy = True }
+        newEf         = setEnvFrame ef' newEfr frameDummied
+    RAP  n   -> Just $ GCC nextCp nextDs nextCs nextEf efr NoDebug
+      where
+        ((nextCp, closureEfr), ds') = case stackPop ds of
+            ((DataClosure nc e), s) -> ((nc, e), s)
+            _                       -> error "RAP: data type mismatch"
+        frame            = assertEnvFrameDumminess (getEnvFrame ef efr) True
+        (nextDs, ef')    = if closureEfr == efr && n == frameSize frame then stackToEnvCopy ds' ef efr n else error "frame mismatch"
+        nextCs           = stackPush cs $ ControlReturn cpInc (parentFrame frame)
+        nextEf           = setEnvFrame ef' efr ((getEnvFrame ef' efr) { isDummy = False })
     BRK      -> Just $ GCC cpInc ds cs ef efr DebugBreak
     DBUG     -> Just $ GCC cpInc nextDs cs ef efr (DebugPrint val)
       where
@@ -129,9 +141,9 @@ instructionExec (GCC cp ds cs ef efr _) instruction = case instruction of
         nextCp        = case val of
             (DataInt x) -> if (x == 0) then f else t
             _           -> error "TSEL: data type mismatch"
-    TAP  n   -> Just $ GCC nextCp nextDs cs nextEf nextEfr NoDebug
+    TAP n    -> Just $ GCC nextCp nextDs cs nextEf nextEfr NoDebug
       where
-        -- TODO: tail-call optimization:
+        -- TODO: implement tail-call optimization:
         -- Do not allocate frame if we can reuse the current one
         -- Check: frame is big enough AND frame is not captured by LDF
         ((nextCp, closureEfr), ds') = case stackPop ds of
@@ -139,12 +151,19 @@ instructionExec (GCC cp ds cs ef efr _) instruction = case instruction of
             _                       -> error "TAP: data type mismatch"
         (nextEfr, ef')   = allocEnvFrame ef n closureEfr
         (nextDs, nextEf) = stackToEnvCopy ds' ef' nextEfr n
-    TRAP _   -> Nothing -- TODO
+    TRAP  n  -> Just $ GCC nextCp nextDs cs nextEf efr NoDebug
+      where
+        ((nextCp, closureEfr), ds') = case stackPop ds of
+            ((DataClosure nc e), s) -> ((nc, e), s)
+            _                       -> error "RAP: data type mismatch"
+        frame            = assertEnvFrameDumminess (getEnvFrame ef efr) True
+        (nextDs, ef')    = if closureEfr == efr && n == frameSize frame then stackToEnvCopy ds' ef efr n else error "frame mismatch"
+        nextEf           = setEnvFrame ef' efr ((getEnvFrame ef' efr) { isDummy = False })
     ST n i   -> Just $ GCC cpInc newDs cs newEf efr NoDebug
       where
         (val, newDs) = stackPop ds
         fid      = getParentEnvFrameId ef efr n
-        frame    = assertEnvFrameNotDummy $ getEnvFrame ef fid
+        frame    = assertEnvFrameDumminess (getEnvFrame ef fid) False
         frame'   = modEnvFrameVal frame i val
         newEf    = setEnvFrame ef fid frame'
   where
