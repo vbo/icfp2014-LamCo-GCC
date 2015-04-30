@@ -112,6 +112,8 @@ instructionExec (GCC cp ds cs ef efr _) instruction = case instruction of
         (nextDs, nextEf) = stackToEnvCopy ds' ef' nextEfr n
         nextCs           = stackPush cs $ ControlReturn cpInc efr
     RTN      -> case stackPop cs of
+        -- TODO: if the current frame is not captured by LDF
+        -- we can dealocate it right on RTN instead of waiting for GC
         (ControlStop, _)              -> Nothing -- no next state, machine terminated 
         (ControlReturn cp' efp', cs') -> Just $ GCC cp' ds cs' ef efp' NoDebug
         _                             -> error "RTN: control mismatch"
@@ -127,7 +129,16 @@ instructionExec (GCC cp ds cs ef efr _) instruction = case instruction of
         nextCp        = case val of
             (DataInt x) -> if (x == 0) then f else t
             _           -> error "TSEL: data type mismatch"
-    TAP _    -> Nothing -- TODO
+    TAP  n   -> Just $ GCC nextCp nextDs cs nextEf nextEfr NoDebug
+      where
+        -- TODO: tail-call optimization:
+        -- Do not allocate frame if we can reuse the current one
+        -- Check: frame is big enough AND frame is not captured by LDF
+        ((nextCp, closureEfr), ds') = case stackPop ds of
+            ((DataClosure nc e), s) -> ((nc, e), s)
+            _                       -> error "TAP: data type mismatch"
+        (nextEfr, ef')   = allocEnvFrame ef n closureEfr
+        (nextDs, nextEf) = stackToEnvCopy ds' ef' nextEfr n
     TRAP _   -> Nothing -- TODO
     ST n i   -> Just $ GCC cpInc newDs cs newEf efr NoDebug
       where
