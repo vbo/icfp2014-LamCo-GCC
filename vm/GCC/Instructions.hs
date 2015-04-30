@@ -25,7 +25,9 @@ data Instruction
       -- Debug extensions
     | BRK | DBUG
       -- Tail-call extensions
-    | TSEL Int Int
+    | TSEL Int Int | TAP Int | TRAP Int
+     -- Procedural extensions
+    | ST Int Int
     deriving (Show, Read)
 
 -- Parsing helpers
@@ -50,7 +52,9 @@ instructionExec (GCC cp ds cs ef efr _) instruction = case instruction of
         newDs = stackPush ds $ DataInt x 
     LD  n i  -> Just $ GCC cpInc newDs cs ef efr NoDebug
       where
-        frameVal = getEnvFrameValRelative ef efr n i
+        fid      = getParentEnvFrameId ef efr n
+        frame    = assertEnvFrameNotDummy $ getEnvFrame ef fid
+        frameVal = getEnvFrameVal frame i
         newDs    = stackPush ds frameVal
     ADD      -> intBinaryOp  (+)
     SUB      -> intBinaryOp  (-)
@@ -123,6 +127,15 @@ instructionExec (GCC cp ds cs ef efr _) instruction = case instruction of
         nextCp        = case val of
             (DataInt x) -> if (x == 0) then f else t
             _           -> error "TSEL: data type mismatch"
+    TAP _    -> Nothing -- TODO
+    TRAP _   -> Nothing -- TODO
+    ST n i   -> Just $ GCC cpInc newDs cs newEf efr NoDebug
+      where
+        (val, newDs) = stackPop ds
+        fid      = getParentEnvFrameId ef efr n
+        frame    = assertEnvFrameNotDummy $ getEnvFrame ef fid
+        frame'   = modEnvFrameVal frame i val
+        newEf    = setEnvFrame ef fid frame'
   where
     cpInc          = cp + 1
     intBinaryCmp f = intBinaryOp (\x y -> if (x `f` y) then 1 else 0)

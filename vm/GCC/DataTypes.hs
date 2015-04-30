@@ -13,10 +13,13 @@ module GCC.DataTypes
 , stackFold
 , initGCC
 , allocEnvFrame
+, getParentEnvFrameId
+, getEnvFrameVal
 , setEnvFrameVal
-, getEnvFrameValRelative
+, modEnvFrameVal
 , getEnvFrame
 , setEnvFrame
+, assertEnvFrameNotDummy
 ) where
 
 import qualified Data.Map as Map
@@ -64,10 +67,11 @@ data ControlValue
 
 -- Environment frame type
 data EnvFrame = EnvFrame
-    { envValues        :: !(Map.Map Int DataValue)
-    , frameSize        :: !Int
-    , parentFrame      :: !Int
-    , frameReachable   :: !Bool
+    { envValues      :: !(Map.Map Int DataValue)
+    , frameSize      :: !Int
+    , parentFrame    :: !Int
+    , frameReachable :: !Bool
+    , isDummy        :: !Bool
     } deriving (Show)
 
 -- Environment frame storage interface
@@ -79,19 +83,8 @@ data EnvFrames = EnvFrames
 allocEnvFrame :: EnvFrames -> Int -> Int -> (Int, EnvFrames)
 allocEnvFrame (EnvFrames tbl nxt) size parent = (nxt, EnvFrames tbl' nxt')
   where
-    tbl' = Map.insert nxt (EnvFrame Map.empty size parent True) tbl
+    tbl' = Map.insert nxt (EnvFrame Map.empty size parent True False) tbl
     nxt' = nxt + 1
-
-setEnvFrame :: EnvFrames -> Int -> EnvFrame -> EnvFrames
-setEnvFrame frames fid fr = frames { envTable = Map.insert fid fr (envTable frames) }
-
-setEnvFrameVal :: EnvFrames -> Int -> Int -> DataValue -> EnvFrames
-setEnvFrameVal frames fid vid val = setEnvFrame frames fid frame'
-  where
-    (EnvFrame v s p _)  = getEnvFrame frames fid
-    frame'
-        | vid < s   = EnvFrame (Map.insert vid val v) s p True
-        | otherwise = error ("setting value in illegal index: " ++ show fid ++ " " ++ show vid) 
 
 getEnvFrame :: EnvFrames -> Int -> EnvFrame
 getEnvFrame (EnvFrames tbl _) fid = frame
@@ -100,20 +93,35 @@ getEnvFrame (EnvFrames tbl _) fid = frame
         | Map.member fid tbl = tbl Map.! fid
         | otherwise          = error ("accessing illegal frame: " ++ show fid)
 
-getEnvFrameVal :: EnvFrames -> Int -> Int -> DataValue
-getEnvFrameVal frames fid vid = frameVal
-  where
-    frame  = getEnvFrame frames fid
-    frameVal
-        | vid < (frameSize frame) = (envValues frame) Map.! vid
-        | otherwise               = error ("getting value fron illegal index: " ++ show fid ++ " " ++ show vid) 
+setEnvFrame :: EnvFrames -> Int -> EnvFrame -> EnvFrames
+setEnvFrame frames fid fr = frames { envTable = Map.insert fid fr (envTable frames) }
 
-getEnvFrameValRelative :: EnvFrames -> Int -> Int -> Int -> DataValue
-getEnvFrameValRelative frames fid frel vid
-    | frel == 0 = getEnvFrameVal frames fid vid
-    | otherwise = getEnvFrameValRelative frames (parentFrame frame) (frel - 1) vid
+getParentEnvFrameId :: EnvFrames -> Int -> Int -> Int
+getParentEnvFrameId frames fid skip
+    | skip == 0 = fid
+    | otherwise = getParentEnvFrameId frames (parentFrame frame) (skip - 1)
   where
     frame = getEnvFrame frames fid
+
+modEnvFrameVal :: EnvFrame -> Int -> DataValue -> EnvFrame
+modEnvFrameVal (EnvFrame v s p _ d) vid val
+    | vid < s = EnvFrame (Map.insert vid val v) s p True d
+    | otherwise = error ("setting value in illegal index: " ++ show vid) 
+
+setEnvFrameVal :: EnvFrames -> Int -> Int -> DataValue -> EnvFrames
+setEnvFrameVal frames fid vid val = setEnvFrame frames fid $ modEnvFrameVal (getEnvFrame frames fid) vid val
+
+assertEnvFrameNotDummy :: EnvFrame -> EnvFrame
+assertEnvFrameNotDummy frame
+    | isDummy frame = error ("non-dummy frame expected")
+    | otherwise     = frame
+
+getEnvFrameVal :: EnvFrame -> Int -> DataValue
+getEnvFrameVal frame vid = frameVal
+  where
+    frameVal
+        | vid < (frameSize frame) = (envValues frame) Map.! vid
+        | otherwise               = error ("getting value fron illegal index: " ++ show vid) 
 
 -- Debug state
 data DebugState
