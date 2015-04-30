@@ -23,7 +23,7 @@ data Instruction
     | LDF Int | AP Int | RTN
     | DUM Int | RAP Int -- not implemented yet
       -- Debug extensions
-    | BRK
+    | BRK | DBUG
       -- Tail-call extensions
     | TSEL Int Int
     deriving (Show, Read)
@@ -114,6 +114,9 @@ instructionExec (GCC cp ds cs ef efr _) instruction = case instruction of
     DUM _    -> Nothing -- TODO
     RAP _    -> Nothing -- TODO
     BRK      -> Just $ GCC cpInc ds cs ef efr DebugBreak
+    DBUG     -> Just $ GCC cpInc nextDs cs ef efr (DebugPrint val)
+      where
+        (val, nextDs) = stackPop ds
     TSEL t f -> Just $ GCC nextCp nextDs cs ef efr NoDebug
       where
         (val, nextDs) = stackPop ds
