@@ -39,10 +39,10 @@ Done
  - Core: STOP, LDC, LD, ADD, SUB, MUL, DIV, CEQ, CGT, CGTE, ATOM, CONS, CAR, CDR, SEL, JOIN, LDF, AP, RTN
  - Tail-call: TSEL
  - Debug: BRK
+ - Garbage collector
 
 To-do
  - Core: DUM, RAP
  - Tail-call: TAP, TRAP
  - Debug: DBUG
  - Imperative: ST
- - Garbage collector
