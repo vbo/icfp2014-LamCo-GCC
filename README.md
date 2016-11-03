@@ -4,7 +4,7 @@ LamCo GCC (ICFP Contest 2014)
 This is a basic software implementation of LamCo GCC (also known
 as "Lambda-Man CPU") - sophisticated hardware co-processor from ICFP Contest 2014.
 
-Specification can be found here: http://icfpcontest.org/specification.html
+Specification can be found here: https://icfpcontest2014.github.io/specification.html
 
 Actual "virtual machine" able to execute GCC assembly instructions is written in Haskell.
 
